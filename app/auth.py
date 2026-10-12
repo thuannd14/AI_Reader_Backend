@@ -5,18 +5,24 @@ Accepts the key in either place:
     Authorization: Bearer <key>
 
 If no keys are configured (API_KEYS empty), auth is disabled.
+
+Uses fastapi.security.APIKeyHeader so the key scheme also appears in the
+OpenAPI docs and Swagger UI shows an "Authorize" button.
 """
 from __future__ import annotations
 
 import secrets
 
-from fastapi import Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
+from fastapi.security import APIKeyHeader
 
 from .config import API_KEYS
 
+_api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
 
 async def require_api_key(
-    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+    x_api_key: str | None = Depends(_api_key_header),
     authorization: str | None = Header(default=None),
 ) -> None:
     if not API_KEYS:
