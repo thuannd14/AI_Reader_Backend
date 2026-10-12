@@ -1,0 +1,31 @@
+services:
+  api:
+    build: .
+    image: ai-reader-backend
+    container_name: ai-reader-api
+    ports:
+      - "8000:8000"
+    environment:
+      # SQLite by default; the file persists in ./data (mounted below).
+      DATABASE_URL: sqlite:////app/data/app.db
+      # To use PostgreSQL instead, comment the line above, uncomment this one,
+      # uncomment the `db` service below, and install psycopg
+      # (pip install -r requirements-postgres.txt) inside the image.
+      # DATABASE_URL: postgresql+psycopg://aireader:aireader@db:5432/aireader
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+  # --- Optional PostgreSQL (uncomment together with the DATABASE_URL above) ---
+  # db:
+  #   image: postgres:16-alpine
+  #   environment:
+  #     POSTGRES_USER: aireader
+  #     POSTGRES_PASSWORD: aireader
+  #     POSTGRES_DB: aireader
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #   restart: unless-stopped
+
+# volumes:
+#   pgdata:

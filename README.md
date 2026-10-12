@@ -34,6 +34,26 @@ run.bat
 - Interactive docs: <http://localhost:8000/docs>
 - Health: <http://localhost:8000/health>
 
+## Run with Docker
+
+```bash
+docker compose up --build          # build + start at http://localhost:8000
+docker compose logs -f api
+docker compose down
+```
+
+- The SQLite file persists in `./data` (mounted volume).
+- Healthcheck hits `/health` every 30s.
+- **PostgreSQL:** uncomment the `db` service and the `DATABASE_URL` line in
+  `docker-compose.yml`, then add the driver to the image
+  (`pip install -r requirements-postgres.txt`) and rebuild.
+
+Import CSV inside the running container:
+
+```bash
+docker compose exec api python -m scripts.import_vocab /data/sample.csv --source "Sample" --lang en
+```
+
 ## Import vocabulary
 
 The tool writes a CSV with a fixed schema
