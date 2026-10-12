@@ -88,6 +88,7 @@ Re-importing the same `source_name` **replaces** the previous import.
 | GET | `/sources` | Imported documents |
 | DELETE | `/sources/{id}` | Delete a document and its words |
 | GET | `/stats` | Counts by language/level |
+| GET | `/export` | Download all vocabulary as a JSON file (filters `lang`, `level`) |
 | POST | `/import` | Upload a CSV |
 
 `GET /words` query params: `lang` (`en`/`zh`), `level` (`B1`, `HSK3`…),
@@ -193,5 +194,18 @@ set DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/aireader
 
 ```bash
 pip install -r requirements-dev.txt
-python tests/test_api.py
+python tests/test_api.py     # auth disabled
+python tests/test_auth.py    # auth enabled (API_KEYS set)
+```
+
+## Export JSON
+
+```bash
+# download all words as a JSON file
+curl -o vocabulary.json http://localhost:8000/export
+curl -o zh.json "http://localhost:8000/export?lang=zh&level=HSK3"
+
+# or pretty-print every endpoint (and optionally save)
+python -m scripts.demo_api
+python -m scripts.demo_api --key YOUR_KEY --save report.json
 ```

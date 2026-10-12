@@ -13,6 +13,7 @@ import json
 import sys
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 DEFAULT_ENDPOINTS = ["/health", "/stats", "/sources", "/words?limit=3", "/words/1"]
 
@@ -41,19 +42,30 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--base", default="http://localhost:8000", help="API base URL")
     parser.add_argument("--key", help="API key (X-API-Key)")
     parser.add_argument("--endpoints", nargs="*", default=DEFAULT_ENDPOINTS)
+    parser.add_argument("--save", help="Write every response to this JSON file")
     args = parser.parse_args(argv)
 
     base = args.base.rstrip("/")
     print(f"Testing {base}\n")
+    results: dict[str, dict] = {}
     for endpoint in args.endpoints:
         status, body = _get(base + endpoint, args.key)
         try:
-            body = json.dumps(json.loads(body), ensure_ascii=False, indent=2)
+            parsed: object = json.loads(body)
+            pretty = json.dumps(parsed, ensure_ascii=False, indent=2)
         except json.JSONDecodeError:
-            pass
+            parsed = body
+            pretty = body
+        results[endpoint] = {"status": status, "body": parsed}
         print(f"### GET {endpoint}  ->  {status}")
-        print(body)
+        print(pretty)
         print()
+
+    if args.save:
+        Path(args.save).write_text(
+            json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        print(f"Saved {len(results)} responses -> {args.save}")
     return 0
 
 

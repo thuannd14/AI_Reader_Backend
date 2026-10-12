@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from sqlmodel import Session, func, select
 
 from ..auth import require_api_key
@@ -67,6 +69,38 @@ def get_word(word_id: int, session: Session = Depends(get_session)) -> WordOut:
     if not item:
         raise HTTPException(status_code=404, detail="Word not found")
     return WordOut.model_validate(item, from_attributes=True)
+
+
+@router.get("/export", tags=["export"])
+def export_words(
+    lang: str | None = Query(None, description='Language: "en" or "zh"'),
+    level: str | None = Query(None, description='Level e.g. "B1" or "HSK3"'),
+    session: Session = Depends(get_session),
+) -> JSONResponse:
+    """Download all vocabulary as a JSON file (Content-Disposition: attachment)."""
+    conditions = []
+    if lang:
+        conditions.append(Vocabulary.language == lang)
+    if level:
+        conditions.append(Vocabulary.level == level)
+    stmt = select(Vocabulary)
+    for condition in conditions:
+        stmt = stmt.where(condition)
+    stmt = stmt.order_by(Vocabulary.level, Vocabulary.word)
+    items = session.exec(stmt).all()
+    payload = {
+        "count": len(items),
+        "lang": lang,
+        "level": level,
+        "items": [
+            WordOut.model_validate(item, from_attributes=True).model_dump()
+            for item in items
+        ],
+    }
+    return JSONResponse(
+        content=jsonable_encoder(payload),
+        headers={"Content-Disposition": 'attachment; filename="vocabulary.json"'},
+    )
 
 
 @router.get("/stats", response_model=Stats)

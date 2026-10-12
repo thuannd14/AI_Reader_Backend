@@ -85,6 +85,12 @@ def main() -> int:
     )
     assert client.get("/words").json()["total"] == 3
 
+    # export as a downloadable JSON file
+    export = client.get("/export", params={"lang": "en"})
+    assert export.status_code == 200
+    assert "attachment" in export.headers.get("content-disposition", "")
+    assert export.json()["count"] == 2, export.json()
+
     print("ALL API TESTS PASSED")
     return 0
 
