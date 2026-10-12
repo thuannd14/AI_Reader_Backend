@@ -85,6 +85,14 @@ def main() -> int:
     )
     assert client.get("/words").json()["total"] == 3
 
+    # case-insensitive level ("b1" matches "B1")
+    ci = client.get("/words", params={"level": "b1"}).json()
+    assert ci["total"] == 1 and ci["items"][0]["word"] == "absorb", ci
+
+    # POST /words/search accepts a JSON body instead of URL query params
+    post_search = client.post("/words/search", json={"level": "B2"}).json()
+    assert post_search["total"] == 1 and post_search["items"][0]["word"] == "compensate", post_search
+
     # export as a downloadable JSON file
     export = client.get("/export", params={"lang": "en"})
     assert export.status_code == 200

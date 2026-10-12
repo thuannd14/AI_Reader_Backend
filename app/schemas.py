@@ -51,3 +51,15 @@ class Stats(BaseModel):
     total_sources: int
     languages: dict[str, int]
     levels: dict[str, int]
+
+
+class WordQuery(BaseModel):
+    """Request body for POST /words/search (alternative to GET query params)."""
+
+    lang: str | None = None
+    level: str | None = None
+    q: str | None = None
+    source_id: int | None = None
+    order: str = "level"
+    limit: int = 20
+    offset: int = 0

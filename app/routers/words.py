@@ -9,27 +9,27 @@ from sqlmodel import Session, func, select
 from ..auth import require_api_key
 from ..db import get_session
 from ..models import Source, Vocabulary
-from ..schemas import Stats, WordOut, WordPage
+from ..schemas import Stats, WordOut, WordPage, WordQuery
 
 router = APIRouter(tags=["words"], dependencies=[Depends(require_api_key)])
 
 
-@router.get("/words", response_model=WordPage)
-def list_words(
-    lang: str | None = Query(None, description='Language: "en" or "zh"'),
-    level: str | None = Query(None, description='Level e.g. "B1" or "HSK3"'),
-    q: str | None = Query(None, description="Search in word / meaning / definition"),
-    source_id: int | None = Query(None),
-    order: str = Query("level", pattern="^(level|word|recent)$"),
-    limit: int = Query(20, ge=1, le=200),
-    offset: int = Query(0, ge=0),
-    session: Session = Depends(get_session),
+def _query_words(
+    session: Session,
+    lang: str | None,
+    level: str | None,
+    q: str | None,
+    source_id: int | None,
+    order: str,
+    limit: int,
+    offset: int,
 ) -> WordPage:
     conditions = []
     if lang:
-        conditions.append(Vocabulary.language == lang)
+        conditions.append(func.lower(Vocabulary.language) == lang.strip().lower())
     if level:
-        conditions.append(Vocabulary.level == level)
+        # case-insensitive so "c1" also matches "C1"
+        conditions.append(func.upper(Vocabulary.level) == level.strip().upper())
     if source_id:
         conditions.append(Vocabulary.source_id == source_id)
     if q:
@@ -63,6 +63,32 @@ def list_words(
     )
 
 
+@router.get("/words", response_model=WordPage)
+def list_words(
+    lang: str | None = Query(None, description='Language: "en" or "zh"'),
+    level: str | None = Query(None, description='Level e.g. "B1" or "HSK3"'),
+    q: str | None = Query(None, description="Search in word / meaning / definition"),
+    source_id: int | None = Query(None),
+    order: str = Query("level", pattern="^(level|word|recent)$"),
+    limit: int = Query(20, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    session: Session = Depends(get_session),
+) -> WordPage:
+    """List/search words. Parameters go in the URL (standard for GET)."""
+    return _query_words(session, lang, level, q, source_id, order, limit, offset)
+
+
+@router.post("/words/search", response_model=WordPage)
+def search_words(body: WordQuery, session: Session = Depends(get_session)) -> WordPage:
+    """Same as GET /words but accepts a JSON body instead of URL query params."""
+    order = body.order if body.order in ("level", "word", "recent") else "level"
+    limit = max(1, min(body.limit, 200))
+    offset = max(0, body.offset)
+    return _query_words(
+        session, body.lang, body.level, body.q, body.source_id, order, limit, offset
+    )
+
+
 @router.get("/words/{word_id}", response_model=WordOut)
 def get_word(word_id: int, session: Session = Depends(get_session)) -> WordOut:
     item = session.get(Vocabulary, word_id)
@@ -80,9 +106,9 @@ def export_words(
     """Download all vocabulary as a JSON file (Content-Disposition: attachment)."""
     conditions = []
     if lang:
-        conditions.append(Vocabulary.language == lang)
+        conditions.append(func.lower(Vocabulary.language) == lang.strip().lower())
     if level:
-        conditions.append(Vocabulary.level == level)
+        conditions.append(func.upper(Vocabulary.level) == level.strip().upper())
     stmt = select(Vocabulary)
     for condition in conditions:
         stmt = stmt.where(condition)

@@ -83,13 +83,31 @@ Re-importing the same `source_name` **replaces** the previous import.
 | Method | Path | Description |
 |---|---|---|
 | GET | `/health` | Health check |
-| GET | `/words` | List/search words (see filters below) |
+| GET | `/words` | List/search words (params in URL query string) |
+| POST | `/words/search` | Same, but filters in a **JSON body** |
 | GET | `/words/{id}` | One word |
 | GET | `/sources` | Imported documents |
 | DELETE | `/sources/{id}` | Delete a document and its words |
 | GET | `/stats` | Counts by language/level |
 | GET | `/export` | Download all vocabulary as a JSON file (filters `lang`, `level`) |
 | POST | `/import` | Upload a CSV |
+
+### GET vs POST
+
+`GET` must carry parameters in the **URL query string** (HTTP standard; safe,
+cacheable). If you prefer sending a **JSON body**, use `POST /words/search`:
+
+```bash
+# GET: parameters in the URL
+curl "http://localhost:8000/words?lang=en&level=B1&limit=20&offset=0"
+
+# POST: parameters in a JSON body
+curl -X POST http://localhost:8000/words/search \
+  -H "Content-Type: application/json" \
+  -d '{"lang":"en","level":"B1","limit":20,"offset":0}'
+```
+
+`level` and `lang` are matched case-insensitively (`c1` == `C1`).
 
 `GET /words` query params: `lang` (`en`/`zh`), `level` (`B1`, `HSK3`…),
 `q` (search), `source_id`, `order` (`level`|`word`|`recent`), `limit`, `offset`.
