@@ -4,11 +4,12 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, func, select
 
+from ..auth import require_api_key
 from ..db import get_session
 from ..models import Source, Vocabulary
 from ..schemas import Stats, WordOut, WordPage
 
-router = APIRouter(tags=["words"])
+router = APIRouter(tags=["words"], dependencies=[Depends(require_api_key)])
 
 
 @router.get("/words", response_model=WordPage)

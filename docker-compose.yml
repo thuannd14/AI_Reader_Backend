@@ -8,6 +8,8 @@ services:
     environment:
       # SQLite by default; the file persists in ./data (mounted below).
       DATABASE_URL: sqlite:////app/data/app.db
+      # Comma-separated API keys. Leave empty to disable auth (dev only!).
+      API_KEYS: ${API_KEYS:-}
       # To use PostgreSQL instead, comment the line above, uncomment this one,
       # uncomment the `db` service below, and install psycopg
       # (pip install -r requirements-postgres.txt) inside the image.

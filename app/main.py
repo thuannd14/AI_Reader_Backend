@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session
 
 from .config import API_TITLE, API_VERSION
+from .auth import require_api_key
 from .db import get_session, init_db
 from .importer import import_csv_stream
 from .routers import sources, words
@@ -47,7 +48,8 @@ def health() -> dict:
     return {"status": "ok"}
 
 
-@app.post("/import", response_model=ImportResult, tags=["import"])
+@app.post("/import", response_model=ImportResult, tags=["import"],
+          dependencies=[Depends(require_api_key)])
 async def upload_csv(
     file: UploadFile = File(..., description="vocabulary CSV from the tool"),
     language: str | None = Form(None, description='optional "en" or "zh"'),

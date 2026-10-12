@@ -4,11 +4,12 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, delete, select
 
+from ..auth import require_api_key
 from ..db import get_session
 from ..models import Source, Vocabulary
 from ..schemas import SourceOut
 
-router = APIRouter(tags=["sources"])
+router = APIRouter(tags=["sources"], dependencies=[Depends(require_api_key)])
 
 
 @router.get("/sources", response_model=list[SourceOut])

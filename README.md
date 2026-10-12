@@ -114,6 +114,45 @@ Response:
 }
 ```
 
+## Authentication
+
+Set one or more keys (comma-separated). If `API_KEYS` is empty, auth is
+**disabled** (fine for local dev, never for production).
+
+```bash
+# generate a key
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+
+# enable (Windows)
+set API_KEYS=your_generated_key
+# or in .env:  API_KEYS=key_one,key_two
+```
+
+Clients must send the key as either header:
+
+```bash
+curl -H "X-API-Key: your_generated_key" http://localhost:8000/words
+curl -H "Authorization: Bearer your_generated_key" http://localhost:8000/words
+```
+
+`GET /` and `GET /health` are public; everything else requires a valid key
+(else `401 Unauthorized`).
+
+Android (OkHttp interceptor):
+
+```kotlin
+val client = OkHttpClient.Builder()
+    .addInterceptor { chain ->
+        val req = chain.request().newBuilder()
+            .addHeader("X-API-Key", BuildConfig.API_KEY)
+            .build()
+        chain.proceed(req)
+    }
+    .build()
+```
+
+Keep the key out of the APK source: put it in `local.properties` / `BuildConfig`.
+
 ## Android (Retrofit + Moshi/Gson)
 
 ```kotlin
