@@ -99,43 +99,36 @@ def main() -> int:
     assert "attachment" in export.headers.get("content-disposition", "")
     assert export.json()["count"] == 2, export.json()
 
-    # progress: save current lesson + streak
-    assert client.get("/progress/device-android-1").status_code == 404
+    # progress: paths match Android (PUT /progress/{user_id}, POST .../check-in)
+    uid = "Rh9p6wGfeXSq772EB5QctLIjC293"
+    assert client.get(f"/progress/{uid}").status_code == 404
     source_id = next(s["id"] for s in sources if s["name"] == "zh_doc")
-    word_id = zh_only["items"][0]["id"]
-    p1 = client.put(
-        "/progress",
+    p1 = client.post(
+        f"/progress/{uid}/check-in",
         json={
-            "device_id": "device-android-1",
             "source_id": source_id,
-            "word_id": word_id,
-            "record_study": True,
+            "source_name": "zh_doc",
             "study_date": "2026-10-20",
         },
     ).json()
-    assert p1["streak_days"] == 1 and p1["source_id"] == source_id, p1
-    p2 = client.put(
-        "/progress",
-        json={
-            "device_id": "device-android-1",
-            "source_id": source_id,
-            "record_study": True,
-            "study_date": "2026-10-21",
-        },
+    assert p1["streak_count"] == 1 and p1["current_source_id"] == source_id, p1
+    p2 = client.post(
+        f"/progress/{uid}/check-in",
+        json={"source_id": source_id, "study_date": "2026-10-21"},
     ).json()
-    assert p2["streak_days"] == 2, p2
-    # same day does not bump again
-    p3 = client.put(
-        "/progress",
-        json={
-            "device_id": "device-android-1",
-            "record_study": True,
-            "study_date": "2026-10-21",
-        },
+    assert p2["streak_count"] == 2, p2
+    p3 = client.post(
+        f"/progress/{uid}/check-in",
+        json={"source_id": source_id, "study_date": "2026-10-21"},
     ).json()
-    assert p3["streak_days"] == 2, p3
-    got = client.get("/progress/device-android-1").json()
-    assert got["streak_days"] == 2 and got["last_study_date"] == "2026-10-21", got
+    assert p3["streak_count"] == 2, p3
+    put = client.put(
+        f"/progress/{uid}",
+        json={"current_source_id": source_id, "streak_count": 5, "last_study_date": "2026-10-21"},
+    ).json()
+    assert put["streak_count"] == 5, put
+    got = client.get(f"/progress/{uid}").json()
+    assert got["streak_count"] == 5 and got["user_id"] == uid, got
 
     print("ALL API TESTS PASSED")
     return 0

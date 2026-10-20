@@ -1,497 +1,134 @@
-# AI Reader Backend — API Reference
+# AI Reader Backend ? API Reference
 
 Base URL: `http://localhost:8000`  
-Android emulator → host: `http://10.0.2.2:8000`  
-Interactive docs: <http://localhost:8000/docs>
+Production: `https://aireaderbackend-production.up.railway.app`  
+Interactive docs: `/docs`
 
 ---
 
 ## Authentication
 
-Nếu `API_KEYS` rỗng → auth **tắt** (dev).  
-Nếu có key → mọi endpoint trừ `GET /` và `GET /health` cần một trong hai header:
+N?u `API_KEYS` r?ng ? auth **t?t** (dev).  
+N?u c� key ? m?i endpoint tr? `GET /` v� `GET /health` c?n:
 
 ```http
 X-API-Key: <key>
 Authorization: Bearer <key>
 ```
 
-Sai / thiếu key → `401 Unauthorized` với body:
-
-```json
-{ "detail": "Invalid or missing API key" }
-```
-
 ---
 
-## Models dùng chung
+## Models
 
 ### `WordOut`
-
-| Field | Type | Mô tả |
-|---|---|---|
-| `id` | `int` | ID từ |
-| `word` | `string` | Từ / cụm từ |
-| `traditional` | `string` | Chữ phồn thể (zh), mặc định `""` |
-| `language` | `string` | `"en"` \| `"zh"` |
-| `level` | `string` | CEFR (`B1`…) hoặc HSK (`HSK3`…) |
-| `pos` | `string` | Part of speech |
-| `ipa` | `string` | IPA hoặc pinyin |
-| `definition_en` | `string` | Định nghĩa tiếng Anh |
-| `meaning_vi` | `string` | Nghĩa tiếng Việt |
-| `example` | `string` | Ví dụ |
-| `source_id` | `int \| null` | ID tài liệu nguồn |
-| `created_at` | `datetime` | ISO 8601 |
-
-### `WordPage`
-
-| Field | Type |
-|---|---|
-| `total` | `int` |
-| `limit` | `int` |
-| `offset` | `int` |
-| `items` | `WordOut[]` |
-
-### `SourceOut`
 
 | Field | Type |
 |---|---|
 | `id` | `int` |
-| `name` | `string` |
+| `word` | `string` |
+| `traditional` | `string` |
 | `language` | `string` |
 | `level` | `string` |
-| `count` | `int` |
-| `imported_at` | `datetime` |
+| `pos` / `ipa` / `definition_en` / `meaning_vi` / `example` | `string` |
+| `source_id` | `int \| null` |
+| `created_at` | `datetime` |
 
-### `ImportResult`
+### `WordPage`
+
+`total`, `limit`, `offset`, `items: WordOut[]`
+
+### `SourceOut`
+
+`id`, `name`, `language`, `level`, `count`, `imported_at`
+
+### `ProgressOut`
 
 | Field | Type |
 |---|---|
-| `source_id` | `int` |
-| `source` | `string` |
-| `language` | `string` |
-| `level` | `string` |
-| `imported` | `int` |
-| `skipped` | `int` |
-
-### `Stats`
-
-| Field | Type |
-|---|---|
-| `total_words` | `int` |
-| `total_sources` | `int` |
-| `languages` | `object` — map `lang → count`, ví dụ `{ "en": 80, "zh": 20 }` |
-| `levels` | `object` — map `level → count`, ví dụ `{ "B1": 40, "HSK3": 20 }` |
-
-### `WordQuery` (body của `POST /words/search`)
-
-| Field | Type | Default |
-|---|---|---|
-| `lang` | `string \| null` | `null` |
-| `level` | `string \| null` | `null` |
-| `q` | `string \| null` | `null` |
-| `source_id` | `int \| null` | `null` |
-| `order` | `string` | `"level"` |
-| `limit` | `int` | `20` |
-| `offset` | `int` | `0` |
+| `user_id` | `string` |
+| `current_source_id` | `int \| null` |
+| `current_source_name` | `string` |
+| `current_source_language` | `string` |
+| `current_source_level` | `string` |
+| `current_source_count` | `int` |
+| `streak_count` | `int` |
+| `last_study_date` | `string` (`YYYY-MM-DD`) |
+| `updated_at` | `datetime` |
 
 ---
 
 ## Endpoints
 
-### 1. `GET /` — Meta *(public)*
-
-**Auth:** không cần  
-
-**Input:** không  
-
-**Output:**
-
-```json
-{
-  "name": "AI Reader Vocabulary API",
-  "version": "...",
-  "docs": "/docs"
-}
-```
-
----
-
-### 2. `GET /health` — Health check *(public)*
-
-**Auth:** không cần  
-
-**Input:** không  
-
-**Output:**
-
-```json
-{ "status": "ok" }
-```
-
----
-
-### 3. `GET /words` — Danh sách / tìm từ
-
-**Auth:** cần (nếu `API_KEYS` bật)
-
-**Query parameters**
-
-| Param | Type | Default | Ràng buộc / mô tả |
-|---|---|---|---|
-| `lang` | `string?` | `null` | `"en"` / `"zh"` (case-insensitive) |
-| `level` | `string?` | `null` | `"B1"`, `"HSK3"`… (case-insensitive) |
-| `q` | `string?` | `null` | Search trong `word` / `meaning_vi` / `definition_en` |
-| `source_id` | `int?` | `null` | Lọc theo source |
-| `order` | `string` | `"level"` | `"level"` \| `"word"` \| `"recent"` |
-| `limit` | `int` | `20` | `1`–`200` |
-| `offset` | `int` | `0` | `≥ 0` |
-
-**Output:** `WordPage`
-
-```json
-{
-  "total": 66,
-  "limit": 20,
-  "offset": 0,
-  "items": [
-    {
-      "id": 1,
-      "word": "提高",
-      "traditional": "提高",
-      "language": "zh",
-      "level": "HSK3",
-      "pos": "v",
-      "ipa": "tí gāo",
-      "definition_en": "to raise",
-      "meaning_vi": "nâng cao",
-      "example": "我们要提高生产力",
-      "source_id": 2,
-      "created_at": "2026-10-12T00:00:00Z"
-    }
-  ]
-}
-```
-
-**Ví dụ:**
-
-```bash
-curl "http://localhost:8000/words?lang=en&level=B1&limit=20&offset=0"
-```
-
----
-
-### 4. `POST /words/search` — Tìm từ (JSON body)
-
-Giống `GET /words`, nhưng tham số nằm trong body JSON thay vì query string.
-
-**Auth:** cần (nếu `API_KEYS` bật)
-
-**Input (JSON body):** `WordQuery`
-
-```json
-{
-  "lang": "en",
-  "level": "B1",
-  "q": null,
-  "source_id": null,
-  "order": "level",
-  "limit": 20,
-  "offset": 0
-}
-```
-
-- `order` không hợp lệ → fallback `"level"`
-- `limit` bị clamp về `1`–`200`
-- `offset` bị clamp về `≥ 0`
-
-**Output:** `WordPage`
-
-**Ví dụ:**
-
-```bash
-curl -X POST http://localhost:8000/words/search \
-  -H "Content-Type: application/json" \
-  -d '{"lang":"en","level":"B1","limit":20,"offset":0}'
-```
-
----
-
-### 5. `GET /words/{word_id}` — Chi tiết một từ
-
-**Auth:** cần (nếu `API_KEYS` bật)
-
-**Path parameters**
-
-| Param | Type | Mô tả |
+| Method | Path | M� t? |
 |---|---|---|
-| `word_id` | `int` | ID từ |
-
-**Output:** `WordOut`
-
-**Errors**
-
-| Status | Body |
-|---|---|
-| `404` | `{ "detail": "Word not found" }` |
-
----
-
-### 6. `GET /stats` — Thống kê
-
-**Auth:** cần (nếu `API_KEYS` bật)
-
-**Input:** không  
-
-**Output:** `Stats`
-
-```json
-{
-  "total_words": 100,
-  "total_sources": 3,
-  "languages": { "en": 80, "zh": 20 },
-  "levels": { "B1": 40, "HSK3": 20 }
-}
-```
+| `GET` | `/` | Meta (public) |
+| `GET` | `/health` | Health (public) |
+| `GET` | `/words` | List / filter t? |
+| `POST` | `/words/search` | Search (JSON body) |
+| `GET` | `/words/{id}` | Chi ti?t 1 t? |
+| `GET` | `/stats` | Th?ng k� |
+| `GET` | `/export` | Download JSON |
+| `GET` | `/sources` | Danh s�ch b�i |
+| `DELETE` | `/sources/{id}` | X�a b�i + t? |
+| `PUT` | `/progress/{user_id}` | L?u b�i ?ang h?c / streak |
+| `POST` | `/progress/{user_id}/check-in` | Check-in h�m nay + t?ng streak |
+| `GET` | `/progress/{user_id}` | ??c ti?n ?? |
+| `POST` | `/import` | Upload CSV |
 
 ---
 
-### 7. `GET /export` — Tải vocabulary dạng JSON file
+## Progress (Android)
 
-**Auth:** cần (nếu `API_KEYS` bật)
-
-**Query parameters**
-
-| Param | Type | Default | Mô tả |
-|---|---|---|---|
-| `lang` | `string?` | `null` | Lọc ngôn ngữ |
-| `level` | `string?` | `null` | Lọc level |
-
-**Output:** JSON file download
-
-Header: `Content-Disposition: attachment; filename="vocabulary.json"`
-
-```json
-{
-  "count": 10,
-  "lang": "en",
-  "level": "B1",
-  "items": [ /* WordOut[] */ ]
-}
-```
-
-**Ví dụ:**
-
-```bash
-curl -o vocabulary.json http://localhost:8000/export
-curl -o zh.json "http://localhost:8000/export?lang=zh&level=HSK3"
-```
-
----
-
-### 8. `GET /sources` — Danh sách tài liệu đã import
-
-**Auth:** cần (nếu `API_KEYS` bật)
-
-**Input:** không  
-
-**Output:** `SourceOut[]` (sắp xếp `imported_at` giảm dần)
-
-```json
-[
-  {
-    "id": 1,
-    "name": "ETS 2026 Test 1",
-    "language": "en",
-    "level": "B1",
-    "count": 120,
-    "imported_at": "2026-10-12T00:00:00Z"
-  }
-]
-```
-
----
-
-### 9. `DELETE /sources/{source_id}` — Xóa source và toàn bộ từ liên quan
-
-**Auth:** cần (nếu `API_KEYS` bật)
-
-**Path parameters**
-
-| Param | Type | Mô tả |
-|---|---|---|
-| `source_id` | `int` | ID source |
-
-**Output:**
-
-```json
-{ "deleted": 1 }
-```
-
-**Errors**
-
-| Status | Body |
-|---|---|
-| `404` | `{ "detail": "Source not found" }` |
-
----
-
-### 10. `PUT /progress` — Lưu bài đang học + chuỗi ngày học
-
-**Auth:** cần (nếu `API_KEYS` bật)
-
-**Body JSON**
-
-| Field | Type | Bắt buộc | Mô tả |
-|---|---|---|---|
-| `device_id` | `string` | có | ID máy / install (UUID do app tạo) |
-| `source_id` | `int?` | không | Bài (source) đang học |
-| `word_id` | `int?` | không | Từ đang học (tuỳ chọn) |
-| `record_study` | `bool` | không | Mặc định `true` — ghi nhận học hôm nay & cập nhật streak |
-| `study_date` | `date?` | không | Ngày lịch local app `YYYY-MM-DD` (khuyến nghị) |
-
-**Logic streak (khi `record_study=true`)**
-
-- Cùng ngày với `last_study_date` → không tăng streak
-- Ngày liền sau → `streak_days += 1`
-- Ngắt chuỗi / lần đầu → `streak_days = 1`
-
-**Output — `ProgressOut`**
-
-```json
-{
-  "device_id": "android-uuid-xxx",
-  "source_id": 1,
-  "word_id": 64,
-  "streak_days": 3,
-  "last_study_date": "2026-10-20",
-  "updated_at": "2026-10-20T07:00:00Z"
-}
-```
-
-**Ví dụ:**
-
-```bash
-curl -X PUT https://aireaderbackend-production.up.railway.app/progress \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: YOUR_KEY" \
-  -d '{"device_id":"android-uuid-xxx","source_id":1,"word_id":64,"record_study":true,"study_date":"2026-10-20"}'
-```
-
----
-
-### 11. `GET /progress/{device_id}` — Đọc tiến độ đã lưu
-
-**Auth:** cần (nếu `API_KEYS` bật)
-
-**Output:** `ProgressOut`
-
-**Errors:** `404` nếu chưa từng `PUT /progress`
-
-```bash
-curl -H "X-API-Key: YOUR_KEY" \
-  https://aireaderbackend-production.up.railway.app/progress/android-uuid-xxx
-```
-
----
-
-### 12. `POST /import` — Upload CSV vocabulary
-
-**Auth:** cần (nếu `API_KEYS` bật)
-
-**Content-Type:** `multipart/form-data`
-
-**Form fields**
-
-| Field | Type | Bắt buộc | Mô tả |
-|---|---|---|---|
-| `file` | file | có | CSV từ AI_Reader_Document tool |
-| `language` | `string?` | không | `"en"` / `"zh"` (override; auto-detect nếu có cột `traditional`) |
-| `level` | `string?` | không | Override level |
-| `source_name` | `string?` | không | Tên source; mặc định = tên file |
-
-**Output:** `ImportResult`
-
-```json
-{
-  "source_id": 1,
-  "source": "ETS 2026",
-  "language": "en",
-  "level": "B1",
-  "imported": 120,
-  "skipped": 3
-}
-```
-
-**Notes**
-
-- Re-import cùng `source_name` sẽ **thay thế** import cũ.
-- CSV schema: `word, [traditional], level, pos, ipa, definition_en, meaning_vi, example, count`
-
-**Errors**
-
-| Status | Body |
-|---|---|
-| `400` | `{ "detail": "<lỗi parse/import>" }` |
-
-**Ví dụ:**
-
-```bash
-curl -F "file=@_vocab.csv" -F "source_name=ETS 2026" -F "language=en" \
-  http://localhost:8000/import
-```
-
----
-
-## Gợi ý endpoint cho Android app
-
-| Endpoint | Mục đích thường dùng trong app |
-|---|---|
-| `GET /health` | Kiểm tra server sống |
-| `GET /words` hoặc `POST /words/search` | List / filter / search từ vựng |
-| `GET /words/{id}` | Màn chi tiết một từ |
-| `GET /sources` | Danh sách tài liệu |
-| `PUT /progress` | Lưu bài đang học + streak |
-| `GET /progress/{device_id}` | Đọc tiến độ đã lưu |
-| `GET /stats` | Thống kê |
-| `GET /export` | Đồng bộ / backup (tuỳ app) |
-| `POST /import` | Thường dùng tool/admin, ít dùng trong app đọc |
-| `DELETE /sources/{id}` | Thường dùng tool/admin |
-
----
-
-## Android (OkHttp) — gửi API key
-
-```kotlin
-val client = OkHttpClient.Builder()
-    .addInterceptor { chain ->
-        val req = chain.request().newBuilder()
-            .addHeader("X-API-Key", BuildConfig.API_KEY)
-            .build()
-        chain.proceed(req)
-    }
-    .build()
-```
-
----
-
-## Progress (Chieng app)
-
-### `GET /progress/{user_id}`
-Tr? v? b�i dang h?c + streak. `404` n?u chua c�.
+App ?ang g?i ?�ng c�c path sau:
 
 ### `PUT /progress/{user_id}`
-�?ng b? full t? client (offline).
+
+Body (m?i field optional):
+
+```json
+{
+  "current_source_id": 1,
+  "current_source_name": "HSK1",
+  "current_source_language": "zh",
+  "current_source_level": "HSK1+",
+  "current_source_count": 114,
+  "streak_count": 3,
+  "last_study_date": "2026-10-20"
+}
+```
 
 ### `POST /progress/{user_id}/check-in`
-Body:
+
 ```json
 {
   "source_id": 1,
   "source_name": "HSK1",
   "source_language": "zh",
   "source_level": "HSK1+",
-  "source_count": 114
+  "source_count": 114,
+  "study_date": "2026-10-20"
 }
 ```
-C?p nh?t continue lesson v� chu?i ng�y h?c (UTC).
+
+Streak: c�ng ng�y kh�ng t?ng; ng�y li?n +1; ng?t / l?n ??u = 1.
+
+### `GET /progress/{user_id}`
+
+`404` n?u ch?a t?ng l?u.
+
+```bash
+curl -X POST https://aireaderbackend-production.up.railway.app/progress/USER_ID/check-in \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_KEY" \
+  -d "{\"source_id\":1,\"study_date\":\"2026-10-20\"}"
+```
+
+---
+
+## Import CSV
+
+```bash
+curl -F "file=@vocab.csv" -F "language=zh" -F "level=HSK1+" \
+  -H "X-API-Key: YOUR_KEY" \
+  https://aireaderbackend-production.up.railway.app/import
+```
