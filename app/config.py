@@ -10,8 +10,21 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # SQLite by default; set DATABASE_URL to switch to PostgreSQL/MySQL, e.g.
 #   postgresql+psycopg://user:pass@host:5432/dbname
+# Railway/Render often inject postgres:// or postgresql:// — normalize for psycopg3.
 DEFAULT_DB_URL = f"sqlite:///{(DATA_DIR / 'app.db').as_posix()}"
-DATABASE_URL = os.environ.get("DATABASE_URL", DEFAULT_DB_URL)
+
+
+def _normalize_database_url(url: str) -> str:
+    if url.startswith("postgres://"):
+        return "postgresql+psycopg://" + url[len("postgres://") :]
+    if url.startswith("postgresql://") and "+psycopg" not in url:
+        return "postgresql+psycopg://" + url[len("postgresql://") :]
+    return url
+
+
+DATABASE_URL = _normalize_database_url(
+    os.environ.get("DATABASE_URL", DEFAULT_DB_URL)
+)
 
 API_TITLE = "AI Reader Vocabulary API"
 API_VERSION = "1.0.0"

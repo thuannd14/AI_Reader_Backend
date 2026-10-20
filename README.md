@@ -56,7 +56,9 @@ docker compose exec api python -m scripts.import_vocab /data/sample.csv --source
 
 ## Import vocabulary
 
-The tool writes a CSV with a fixed schema
+> Full guide (where data is stored, XLSX/CSV, checklist): **[`docs/IMPORT.md`](docs/IMPORT.md)**
+
+The tool writes a CSV/XLSX with a fixed schema
 (`word, [traditional], level, pos, ipa, definition_en, meaning_vi, example, count`).
 Import it:
 
@@ -207,6 +209,17 @@ For release builds, use HTTPS and remove `usesCleartextTraffic`.
 set DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/aireader
 ```
 (install `psycopg[binary]`). Tables are created automatically on startup.
+
+## Deploy on Railway (always-on, no local PC)
+
+> Full guide: **[`docs/RAILWAY.md`](docs/RAILWAY.md)**
+
+1. Push this repo to GitHub  
+2. Railway → New Project → Deploy from GitHub  
+3. Add **PostgreSQL** and set `DATABASE_URL` on the API service  
+4. Set `API_KEYS=...`  
+5. Generate a public domain → `GET /health` should return `{"status":"ok"}`  
+6. `POST /import` your CSV, then point the Android app at that HTTPS URL
 
 ## Tests
 

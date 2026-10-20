@@ -121,6 +121,76 @@ def import_csv_file(
     )
 
 
+def import_xlsx_file(
+    session: Session,
+    path: str | Path,
+    source_name: str | None = None,
+    language: str | None = None,
+    level: str | None = None,
+    sheet: str | int | None = None,
+) -> dict[str, Any]:
+    """Import vocabulary from an Excel file (first sheet by default).
+
+    Requires ``openpyxl``. Extra columns beyond the CSV schema are ignored.
+    """
+    try:
+        import openpyxl
+    except ImportError as exc:  # pragma: no cover
+        raise ImportError(
+            "openpyxl is required for .xlsx import. Run: pip install openpyxl"
+        ) from exc
+
+    path = Path(path)
+    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    try:
+        if sheet is None:
+            ws = wb[wb.sheetnames[0]]
+        elif isinstance(sheet, int):
+            ws = wb[wb.sheetnames[sheet]]
+        else:
+            ws = wb[sheet]
+        rows = [
+            ["" if c is None else str(c) for c in row]
+            for row in ws.iter_rows(values_only=True)
+        ]
+    finally:
+        wb.close()
+
+    if not rows:
+        raise ValueError(f"Empty XLSX: {path}")
+    headers = [h.strip() for h in rows[0]]
+    body = [
+        r + [""] * (len(headers) - len(r))
+        for r in rows[1:]
+        if any(cell.strip() for cell in r)
+    ]
+    return import_rows(
+        session, headers, body, source_name or path.stem,
+        language=language, level=level,
+    )
+
+
+def import_file(
+    session: Session,
+    path: str | Path,
+    source_name: str | None = None,
+    language: str | None = None,
+    level: str | None = None,
+) -> dict[str, Any]:
+    """Import ``.csv`` or ``.xlsx`` vocabulary into the database."""
+    path = Path(path)
+    suffix = path.suffix.lower()
+    if suffix == ".csv":
+        return import_csv_file(
+            session, path, source_name=source_name, language=language, level=level
+        )
+    if suffix in (".xlsx", ".xlsm"):
+        return import_xlsx_file(
+            session, path, source_name=source_name, language=language, level=level
+        )
+    raise ValueError(f"Unsupported file type: {suffix} (use .csv or .xlsx)")
+
+
 def import_csv_stream(
     session: Session,
     stream: BinaryIO | TextIO | bytes | str,
