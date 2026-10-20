@@ -99,6 +99,44 @@ def main() -> int:
     assert "attachment" in export.headers.get("content-disposition", "")
     assert export.json()["count"] == 2, export.json()
 
+    # progress: save current lesson + streak
+    assert client.get("/progress/device-android-1").status_code == 404
+    source_id = next(s["id"] for s in sources if s["name"] == "zh_doc")
+    word_id = zh_only["items"][0]["id"]
+    p1 = client.put(
+        "/progress",
+        json={
+            "device_id": "device-android-1",
+            "source_id": source_id,
+            "word_id": word_id,
+            "record_study": True,
+            "study_date": "2026-10-20",
+        },
+    ).json()
+    assert p1["streak_days"] == 1 and p1["source_id"] == source_id, p1
+    p2 = client.put(
+        "/progress",
+        json={
+            "device_id": "device-android-1",
+            "source_id": source_id,
+            "record_study": True,
+            "study_date": "2026-10-21",
+        },
+    ).json()
+    assert p2["streak_days"] == 2, p2
+    # same day does not bump again
+    p3 = client.put(
+        "/progress",
+        json={
+            "device_id": "device-android-1",
+            "record_study": True,
+            "study_date": "2026-10-21",
+        },
+    ).json()
+    assert p3["streak_days"] == 2, p3
+    got = client.get("/progress/device-android-1").json()
+    assert got["streak_days"] == 2 and got["last_study_date"] == "2026-10-21", got
+
     print("ALL API TESTS PASSED")
     return 0
 

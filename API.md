@@ -336,7 +336,66 @@ curl -o zh.json "http://localhost:8000/export?lang=zh&level=HSK3"
 
 ---
 
-### 10. `POST /import` — Upload CSV vocabulary
+### 10. `PUT /progress` — Lưu bài đang học + chuỗi ngày học
+
+**Auth:** cần (nếu `API_KEYS` bật)
+
+**Body JSON**
+
+| Field | Type | Bắt buộc | Mô tả |
+|---|---|---|---|
+| `device_id` | `string` | có | ID máy / install (UUID do app tạo) |
+| `source_id` | `int?` | không | Bài (source) đang học |
+| `word_id` | `int?` | không | Từ đang học (tuỳ chọn) |
+| `record_study` | `bool` | không | Mặc định `true` — ghi nhận học hôm nay & cập nhật streak |
+| `study_date` | `date?` | không | Ngày lịch local app `YYYY-MM-DD` (khuyến nghị) |
+
+**Logic streak (khi `record_study=true`)**
+
+- Cùng ngày với `last_study_date` → không tăng streak
+- Ngày liền sau → `streak_days += 1`
+- Ngắt chuỗi / lần đầu → `streak_days = 1`
+
+**Output — `ProgressOut`**
+
+```json
+{
+  "device_id": "android-uuid-xxx",
+  "source_id": 1,
+  "word_id": 64,
+  "streak_days": 3,
+  "last_study_date": "2026-10-20",
+  "updated_at": "2026-10-20T07:00:00Z"
+}
+```
+
+**Ví dụ:**
+
+```bash
+curl -X PUT https://aireaderbackend-production.up.railway.app/progress \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_KEY" \
+  -d '{"device_id":"android-uuid-xxx","source_id":1,"word_id":64,"record_study":true,"study_date":"2026-10-20"}'
+```
+
+---
+
+### 11. `GET /progress/{device_id}` — Đọc tiến độ đã lưu
+
+**Auth:** cần (nếu `API_KEYS` bật)
+
+**Output:** `ProgressOut`
+
+**Errors:** `404` nếu chưa từng `PUT /progress`
+
+```bash
+curl -H "X-API-Key: YOUR_KEY" \
+  https://aireaderbackend-production.up.railway.app/progress/android-uuid-xxx
+```
+
+---
+
+### 12. `POST /import` — Upload CSV vocabulary
 
 **Auth:** cần (nếu `API_KEYS` bật)
 
@@ -392,6 +451,8 @@ curl -F "file=@_vocab.csv" -F "source_name=ETS 2026" -F "language=en" \
 | `GET /words` hoặc `POST /words/search` | List / filter / search từ vựng |
 | `GET /words/{id}` | Màn chi tiết một từ |
 | `GET /sources` | Danh sách tài liệu |
+| `PUT /progress` | Lưu bài đang học + streak |
+| `GET /progress/{device_id}` | Đọc tiến độ đã lưu |
 | `GET /stats` | Thống kê |
 | `GET /export` | Đồng bộ / backup (tuỳ app) |
 | `POST /import` | Thường dùng tool/admin, ít dùng trong app đọc |
@@ -411,3 +472,26 @@ val client = OkHttpClient.Builder()
     }
     .build()
 ```
+
+---
+
+## Progress (Chieng app)
+
+### `GET /progress/{user_id}`
+Tr? v? b�i dang h?c + streak. `404` n?u chua c�.
+
+### `PUT /progress/{user_id}`
+�?ng b? full t? client (offline).
+
+### `POST /progress/{user_id}/check-in`
+Body:
+```json
+{
+  "source_id": 1,
+  "source_name": "HSK1",
+  "source_language": "zh",
+  "source_level": "HSK1+",
+  "source_count": 114
+}
+```
+C?p nh?t continue lesson v� chu?i ng�y h?c (UTC).
