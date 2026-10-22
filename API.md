@@ -125,6 +125,33 @@ curl -X POST https://aireaderbackend-production.up.railway.app/progress/USER_ID/
 
 ---
 
+## Learning words (Chieng flashcards)
+
+| Method | Path |
+|---|---|
+| `GET` | `/learning-words/{user_id}` |
+| `PUT` | `/learning-words/{user_id}` |
+| `PUT` | `/learning-words/{user_id}/{word_id}` |
+| `DELETE` | `/learning-words/{user_id}/{word_id}` |
+
+Batch upsert body:
+
+```json
+{
+  "items": [
+    {
+      "word_id": 12,
+      "word": "??",
+      "status": "LEARNING",
+      "meaning_vi": "xin chào",
+      "updated_at_epoch_ms": 1730000000000
+    }
+  ]
+}
+```
+
+`status`: `LEARNING` | `KNOWN` | `REVIEW`. Conflict: keep row with newer `updated_at_epoch_ms`.
+
 ## Import CSV
 
 ```bash
@@ -132,3 +159,4 @@ curl -F "file=@vocab.csv" -F "language=zh" -F "level=HSK1+" \
   -H "X-API-Key: YOUR_KEY" \
   https://aireaderbackend-production.up.railway.app/import
 ```
+

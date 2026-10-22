@@ -99,3 +99,48 @@ class StudyCheckIn(BaseModel):
     source_count: int = 0
     # Client local calendar date YYYY-MM-DD (recommended).
     study_date: str | None = None
+
+
+class LearningWordOut(BaseModel):
+    user_id: str
+    word_id: int
+    word: str = ""
+    traditional: str = ""
+    language: str = ""
+    level: str = ""
+    pos: str = ""
+    ipa: str = ""
+    definition_en: str = ""
+    meaning_vi: str = ""
+    example: str = ""
+    source_id: int | None = None
+    status: str = "LEARNING"
+    added_at_epoch_ms: int = 0
+    updated_at_epoch_ms: int = 0
+
+
+class LearningWordUpsert(BaseModel):
+    """Body for PUT /learning-words/{user_id}/{word_id} (word_id also in path)."""
+
+    word_id: int | None = None  # required for batch upsert
+    word: str = ""
+    traditional: str = ""
+    language: str = ""
+    level: str = ""
+    pos: str = ""
+    ipa: str = ""
+    definition_en: str = ""
+    meaning_vi: str = ""
+    example: str = ""
+    source_id: int | None = None
+    status: str = "LEARNING"
+    added_at_epoch_ms: int = 0
+    updated_at_epoch_ms: int = 0
+
+
+class LearningWordsUpsertBatch(BaseModel):
+    items: list[LearningWordUpsert]
+
+
+class LearningWordsListOut(BaseModel):
+    items: list[LearningWordOut]

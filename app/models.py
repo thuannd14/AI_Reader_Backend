@@ -4,6 +4,7 @@ Tables:
     * Source        - one imported document (file name, language, level).
     * Vocabulary    - one word/phrase, linked to its Source via `source_id`.
     * UserProgress  - per-user continue-lesson pointer + study streak.
+    * LearningWord  - per-user saved flashcard words (Chieng).
 
 (The FK is handled explicitly in the code rather than via ORM relationships,
 which keeps the models simple and portable across databases.)
@@ -55,3 +56,23 @@ class UserProgress(SQLModel, table=True):
     streak_count: int = Field(default=0)
     last_study_date: str = Field(default="")  # YYYY-MM-DD
     updated_at: datetime = Field(default_factory=_utcnow)
+
+
+class LearningWord(SQLModel, table=True):
+    """Per-user saved vocabulary word for flashcard practice (Chieng)."""
+
+    user_id: str = Field(primary_key=True, max_length=128, index=True)
+    word_id: int = Field(primary_key=True, index=True)
+    word: str = Field(default="")
+    traditional: str = Field(default="")
+    language: str = Field(default="")
+    level: str = Field(default="")
+    pos: str = Field(default="")
+    ipa: str = Field(default="")
+    definition_en: str = Field(default="")
+    meaning_vi: str = Field(default="")
+    example: str = Field(default="")
+    source_id: int | None = Field(default=None)
+    status: str = Field(default="LEARNING", index=True)  # LEARNING|KNOWN|REVIEW
+    added_at_epoch_ms: int = Field(default=0)
+    updated_at_epoch_ms: int = Field(default=0, index=True)
