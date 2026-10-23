@@ -24,17 +24,28 @@ def _migrate_learning_word_epoch_columns() -> None:
     """Ensure epoch-ms columns are BIGINT (Postgres INTEGER overflows ms timestamps)."""
     if "postgresql" not in DATABASE_URL and "postgres" not in DATABASE_URL:
         return
+    # SQLModel default table name for LearningWord is "learningword".
     statements = (
-        "ALTER TABLE learningword ALTER COLUMN added_at_epoch_ms TYPE BIGINT USING added_at_epoch_ms::bigint",
-        "ALTER TABLE learningword ALTER COLUMN updated_at_epoch_ms TYPE BIGINT USING updated_at_epoch_ms::bigint",
+        """
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM information_schema.tables
+            WHERE table_name = 'learningword'
+          ) THEN
+            ALTER TABLE learningword
+              ALTER COLUMN added_at_epoch_ms TYPE BIGINT
+              USING added_at_epoch_ms::bigint;
+            ALTER TABLE learningword
+              ALTER COLUMN updated_at_epoch_ms TYPE BIGINT
+              USING updated_at_epoch_ms::bigint;
+          END IF;
+        END $$;
+        """,
     )
     with engine.begin() as conn:
         for stmt in statements:
-            try:
-                conn.execute(text(stmt))
-            except Exception:
-                # Table may not exist yet, or already BIGINT — ignore.
-                pass
+            conn.execute(text(stmt))
 
 
 

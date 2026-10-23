@@ -111,19 +111,26 @@ def upsert_learning_word(
     if word_id <= 0:
         raise HTTPException(status_code=400, detail="word_id must be positive")
 
-    existing = session.get(LearningWord, (user_id, word_id))
-    incoming_ts = body.updated_at_epoch_ms or 0
-    if existing and existing.updated_at_epoch_ms > incoming_ts:
-        return _to_out(existing)
+    try:
+        existing = session.get(LearningWord, (user_id, word_id))
+        incoming_ts = body.updated_at_epoch_ms or 0
+        if existing and existing.updated_at_epoch_ms > incoming_ts:
+            return _to_out(existing)
 
-    row = existing or LearningWord(user_id=user_id, word_id=word_id)
-    if not existing:
-        row.added_at_epoch_ms = body.added_at_epoch_ms or incoming_ts
-    _apply_upsert(row, body, word_id)
-    session.add(row)
-    session.commit()
-    session.refresh(row)
-    return _to_out(row)
+        row = existing or LearningWord(user_id=user_id, word_id=word_id)
+        if not existing:
+            row.added_at_epoch_ms = body.added_at_epoch_ms or incoming_ts
+        _apply_upsert(row, body, word_id)
+        session.add(row)
+        session.commit()
+        session.refresh(row)
+        return _to_out(row)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"learning-words upsert failed: {exc}") from exc
+
 
 
 @router.delete("/learning-words/{user_id}/{word_id}")
