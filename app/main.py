@@ -48,6 +48,38 @@ def health() -> dict:
     return {"status": "ok"}
 
 
+@app.get("/health/learning-words-schema", tags=["meta"], dependencies=[Depends(require_api_key)])
+def learning_words_schema() -> dict:
+    """Debug: report Postgres udt_name for learningword epoch columns."""
+    from sqlalchemy import text
+
+    from .db import engine
+    from .config import DATABASE_URL
+
+    if "postgres" not in DATABASE_URL:
+        return {"db": "non-postgres", "columns": {}}
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text(
+                """
+                SELECT table_name, column_name, udt_name
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND (
+                    table_name IN ('learningword', 'learning_word', 'learning_words')
+                    OR column_name IN ('added_at_epoch_ms', 'updated_at_epoch_ms')
+                  )
+                ORDER BY table_name, column_name
+                """
+            )
+        ).fetchall()
+    return {
+        "columns": [
+            {"table": r[0], "column": r[1], "udt": r[2]} for r in rows
+        ]
+    }
+
+
 @app.post("/import", response_model=ImportResult, tags=["import"],
           dependencies=[Depends(require_api_key)])
 async def upload_csv(
