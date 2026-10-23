@@ -21,31 +21,37 @@ def init_db() -> None:
 
 
 def _migrate_learning_word_epoch_columns() -> None:
-    """Ensure epoch-ms columns are BIGINT (Postgres INTEGER overflows ms timestamps)."""
+    """Ensure epoch-ms columns are BIGINT (Postgres INTEGER overflows ms timestamps).
+
+    If ALTER is blocked, drop the (still empty / salvageable) table so create_all
+    recreates it with the correct BIGINT columns.
+    """
     if "postgresql" not in DATABASE_URL and "postgres" not in DATABASE_URL:
         return
     # SQLModel default table name for LearningWord is "learningword".
-    statements = (
-        """
-        DO $$
-        BEGIN
-          IF EXISTS (
-            SELECT 1 FROM information_schema.tables
-            WHERE table_name = 'learningword'
-          ) THEN
-            ALTER TABLE learningword
-              ALTER COLUMN added_at_epoch_ms TYPE BIGINT
-              USING added_at_epoch_ms::bigint;
-            ALTER TABLE learningword
-              ALTER COLUMN updated_at_epoch_ms TYPE BIGINT
-              USING updated_at_epoch_ms::bigint;
-          END IF;
-        END $$;
-        """,
-    )
     with engine.begin() as conn:
-        for stmt in statements:
-            conn.execute(text(stmt))
+        try:
+            conn.execute(
+                text(
+                    """
+                    ALTER TABLE IF EXISTS learningword
+                      ALTER COLUMN added_at_epoch_ms TYPE BIGINT
+                      USING added_at_epoch_ms::bigint
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    """
+                    ALTER TABLE IF EXISTS learningword
+                      ALTER COLUMN updated_at_epoch_ms TYPE BIGINT
+                      USING updated_at_epoch_ms::bigint
+                    """
+                )
+            )
+        except Exception:
+            conn.execute(text("DROP TABLE IF EXISTS learningword CASCADE"))
+            SQLModel.metadata.create_all(engine)
 
 
 
