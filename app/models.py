@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from sqlalchemy import BigInteger, Column
 from sqlmodel import Field, SQLModel
 
 
@@ -74,5 +75,9 @@ class LearningWord(SQLModel, table=True):
     example: str = Field(default="")
     source_id: int | None = Field(default=None)
     status: str = Field(default="LEARNING", index=True)  # LEARNING|KNOWN|REVIEW
-    added_at_epoch_ms: int = Field(default=0)
-    updated_at_epoch_ms: int = Field(default=0, index=True)
+    # Epoch millis must be BIGINT — Postgres INTEGER overflows (~2e9).
+    added_at_epoch_ms: int = Field(default=0, sa_column=Column(BigInteger(), nullable=False, default=0))
+    updated_at_epoch_ms: int = Field(
+        default=0,
+        sa_column=Column(BigInteger(), nullable=False, default=0, index=True),
+    )
