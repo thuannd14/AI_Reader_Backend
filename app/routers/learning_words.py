@@ -75,21 +75,28 @@ def upsert_learning_words_batch(
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id is required")
 
-    for item in body.items:
-        word_id = item.word_id
-        if word_id is None or word_id <= 0:
-            raise HTTPException(status_code=400, detail="Each item needs a positive word_id")
-        existing = session.get(LearningWord, (user_id, word_id))
-        incoming_ts = item.updated_at_epoch_ms or 0
-        if existing and existing.updated_at_epoch_ms > incoming_ts:
-            continue
-        row = existing or LearningWord(user_id=user_id, word_id=word_id)
-        if not existing:
-            row.added_at_epoch_ms = item.added_at_epoch_ms or incoming_ts
-        _apply_upsert(row, item, word_id)
-        session.add(row)
+    try:
+        for item in body.items:
+            word_id = item.word_id
+            if word_id is None or word_id <= 0:
+                raise HTTPException(status_code=400, detail="Each item needs a positive word_id")
+            existing = session.get(LearningWord, (user_id, word_id))
+            incoming_ts = item.updated_at_epoch_ms or 0
+            if existing and existing.updated_at_epoch_ms > incoming_ts:
+                continue
+            row = existing or LearningWord(user_id=user_id, word_id=word_id)
+            if not existing:
+                row.added_at_epoch_ms = item.added_at_epoch_ms or incoming_ts
+            _apply_upsert(row, item, word_id)
+            session.add(row)
 
-    session.commit()
+        session.commit()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"learning-words batch upsert failed: {exc}") from exc
+
     rows = session.exec(
         select(LearningWord)
         .where(LearningWord.user_id == user_id)

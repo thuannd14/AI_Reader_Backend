@@ -23,35 +23,56 @@ def init_db() -> None:
 def _migrate_learning_word_epoch_columns() -> None:
     """Ensure epoch-ms columns are BIGINT (Postgres INTEGER overflows ms timestamps).
 
-    If ALTER is blocked, drop the (still empty / salvageable) table so create_all
-    recreates it with the correct BIGINT columns.
+    Verify information_schema; if columns are still int4, DROP + create_all so
+    SQLModel BigInteger columns win. Learning-word rows are sync-rebuildable.
     """
     if "postgresql" not in DATABASE_URL and "postgres" not in DATABASE_URL:
         return
     # SQLModel default table name for LearningWord is "learningword".
+    table = "learningword"
+
+    def _epoch_columns_are_bigint(conn) -> bool:
+        for column in ("added_at_epoch_ms", "updated_at_epoch_ms"):
+            row = conn.execute(
+                text(
+                    """
+                    SELECT udt_name
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                      AND table_name = :table
+                      AND column_name = :column
+                    """
+                ),
+                {"table": table, "column": column},
+            ).fetchone()
+            if row is None:
+                return False
+            if (row[0] or "").lower() not in {"int8", "bigint"}:
+                return False
+        return True
+
     with engine.begin() as conn:
+        if _epoch_columns_are_bigint(conn):
+            return
         try:
-            conn.execute(
-                text(
-                    """
-                    ALTER TABLE IF EXISTS learningword
-                      ALTER COLUMN added_at_epoch_ms TYPE BIGINT
-                      USING added_at_epoch_ms::bigint
-                    """
+            for column in ("added_at_epoch_ms", "updated_at_epoch_ms"):
+                conn.execute(
+                    text(
+                        f"""
+                        ALTER TABLE IF EXISTS {table}
+                          ALTER COLUMN {column} TYPE BIGINT
+                          USING {column}::bigint
+                        """
+                    )
                 )
-            )
-            conn.execute(
-                text(
-                    """
-                    ALTER TABLE IF EXISTS learningword
-                      ALTER COLUMN updated_at_epoch_ms TYPE BIGINT
-                      USING updated_at_epoch_ms::bigint
-                    """
-                )
-            )
+            if _epoch_columns_are_bigint(conn):
+                return
         except Exception:
-            conn.execute(text("DROP TABLE IF EXISTS learningword CASCADE"))
-            SQLModel.metadata.create_all(engine)
+            pass
+        conn.execute(text(f"DROP TABLE IF EXISTS {table} CASCADE"))
+
+    # create_all outside the DROP transaction so metadata sees a clean state.
+    SQLModel.metadata.create_all(engine)
 
 
 
