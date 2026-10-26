@@ -143,7 +143,8 @@ def _map_result(raw: dict) -> PronunciationAssessOut:
 
 @router.get("/pronunciation/health", response_model=PronunciationHealthOut)
 def pronunciation_health() -> PronunciationHealthOut:
-    enabled_flag = os.getenv("ENABLE_OPENPRONOUNCE", "1").strip().lower() not in {
+    # Default OFF — production slim image does not ship torch/OpenPronounce.
+    enabled_flag = os.getenv("ENABLE_OPENPRONOUNCE", "0").strip().lower() not in {
         "0",
         "false",
         "no",
@@ -153,7 +154,7 @@ def pronunciation_health() -> PronunciationHealthOut:
         return PronunciationHealthOut(
             enabled=False,
             ready=False,
-            detail="ENABLE_OPENPRONOUNCE is off",
+            detail="ENABLE_OPENPRONOUNCE is off (slim deploy)",
         )
     ok, detail = _try_import()
     return PronunciationHealthOut(
@@ -169,7 +170,7 @@ async def assess_pronunciation(
     expected_text: str = Form(..., description="Reference sentence the user should read"),
     lang: str = Form("en"),
 ) -> PronunciationAssessOut:
-    enabled_flag = os.getenv("ENABLE_OPENPRONOUNCE", "1").strip().lower() not in {
+    enabled_flag = os.getenv("ENABLE_OPENPRONOUNCE", "0").strip().lower() not in {
         "0",
         "false",
         "no",

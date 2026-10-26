@@ -189,24 +189,16 @@ Cùng `user_id` + `client_message_id` ? idempotent (tr? b?n ghi c?).
 
 ---
 
-## Pronunciation (OpenPronounce — English)
+## Pronunciation (OpenPronounce — English) — **disabled in production**
 
-Self-hosted phoneme scoring (no Azure). Requires ffmpeg + espeak-ng + torch in the image.
+Routes remain for a future dedicated service. Production Docker is **slim** (`ENABLE_OPENPRONOUNCE=0`, no torch) so vocab/progress/chat-logs stay light.
 
-| Method | Path |
-|---|---|
-| `GET` | `/pronunciation/health` |
-| `POST` | `/pronunciation/assess` |
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/pronunciation/health` | `{ enabled: false }` on slim deploy |
+| `POST` | `/pronunciation/assess` | `503` while disabled |
 
-Multipart form:
-
-- `file` — audio (wav / m4a / mp3)
-- `expected_text` — sentence the learner should read
-- `lang` — default `en` (English only on this deployment)
-
-Response includes `score`, `recognized_text`, accuracy/fluency/completeness-style fields, and `words[]` mispronunciations.
-
-Env: `ENABLE_OPENPRONOUNCE=1` (default). First request may download ~GB models from Hugging Face — need enough Railway RAM/disk.
+To enable later: separate service + `ENABLE_OPENPRONOUNCE=1` + install `requirements-pronunciation.txt` / torch (not on the main API image).
 
 ## Import CSV
 
