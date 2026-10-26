@@ -134,32 +134,70 @@ API app sẽ đọc:
 
 ---
 
-## 4. Cách khác: upload qua API
+## 4. Upload lên Railway (production) — khuyến nghị
 
-Khi server đang chạy:
+CLI `import_vocab` **không** đẩy lên Railway trừ khi bạn set `DATABASE_URL`
+production. Muốn app online thấy từ mới → upload qua API.
 
-```bash
-curl -F "file=@vocab.xlsx" ^
-  -F "source_name=Bai 1" ^
-  -F "language=zh" ^
-  -F "level=HSK1+" ^
-  http://localhost:8000/import
+**Production URL:** `https://aireaderbackend-production.up.railway.app`
+
+### Bảo mật API key
+
+- Key nằm trên Railway Variables (`API_KEYS`) — **không** commit vào git / docs.
+- Trên máy local, set env mỗi session (hoặc User env Windows):
+
+```powershell
+$env:AIREADER_API_KEY="paste_key_from_railway_here"
 ```
 
-> Endpoint `/import` hiện nhận **CSV upload**. Với `.xlsx`, dùng CLI ở mục 3 (khuyến nghị).
+### Cách nhanh (xlsx hoặc csv)
 
-Nếu bật `API_KEYS`, thêm: `-H "X-API-Key: your_key"`.
+```powershell
+cd D:\Android_Project_Personal\ai-reader-backend
+
+# lần đầu mỗi cửa sổ PowerShell:
+$env:AIREADER_API_KEY="..."
+
+python -m scripts.upload_railway `
+  "D:\Android_Project_Personal\AI_Reader_Document\output\FILE.xlsx" `
+  --lang zh --level HSK2+
+```
+
+Script tự đổi `.xlsx` → CSV rồi `POST /import`. Output mẫu:
+
+```text
+Uploaded 54 words [zh/HSK2+] <- ...  (skipped 0, source_id=2)
+```
+
+### Curl thủ công (chỉ CSV; dùng `curl.exe` trên PowerShell)
+
+```powershell
+curl.exe -F "file=@D:\path\to\file.csv" `
+  -F "source_name=Ten_Source" `
+  -F "language=zh" `
+  -F "level=HSK2+" `
+  -H "X-API-Key: $env:AIREADER_API_KEY" `
+  https://aireaderbackend-production.up.railway.app/import
+```
+
+### Local only (SQLite `data/app.db`)
+
+```bash
+python -m scripts.import_vocab "path\to\file.xlsx" --lang zh --level HSK1+
+```
+
+Hoặc `POST http://localhost:8000/import` khi `run.bat` đang chạy.
 
 ---
 
 ## 5. Checklist lần sau (copy nhanh)
 
 ```text
-[ ] 1. Tool AI_Reader_Document đã xuất .xlsx hoặc .csv trong output/
+[ ] 1. Tool AI_Reader_Document đã xuất .xlsx/.csv trong output/
 [ ] 2. cd ai-reader-backend
-[ ] 3. python -m scripts.import_vocab "PATH\file.xlsx" --lang zh --level HSK1+
-[ ] 4. Xem source_id trong log / GET /sources
-[ ] 5. App gọi GET /words?source_id=<id>  → data hiện lên
+[ ] 3. $env:AIREADER_API_KEY="..."   (nếu chưa set trong session)
+[ ] 4. python -m scripts.upload_railway "PATH\file.xlsx" --lang zh --level HSK2+
+[ ] 5. Kiểm tra: GET /sources hoặc /stats trên domain Railway
 ```
 
 ---
@@ -172,6 +210,9 @@ Nếu bật `API_KEYS`, thêm: `-H "X-API-Key: your_key"`.
 | `Unsupported file type` | Chỉ `.csv` / `.xlsx` / `.xlsm` |
 | Import 0 từ | Thiếu cột `word`, hoặc file rỗng |
 | App không thấy data | Sai base URL / chưa restart server / filter `lang`/`source_id` sai |
+| Import local nhưng app Railway không có | Phải dùng `upload_railway` (mục 4), không dùng `import_vocab` |
+| `401` khi upload Railway | Sai / thiếu `$env:AIREADER_API_KEY` |
+| PowerShell `curl` lỗi | Dùng `curl.exe` hoặc script `upload_railway` |
 | Muốn xóa 1 tài liệu | `DELETE /sources/{id}` hoặc import lại cùng `--source` |
 | Muốn reset hết DB local | Xóa `data/app.db`, chạy lại import |
 
@@ -182,14 +223,13 @@ Nếu bật `API_KEYS`, thêm: `-H "X-API-Key: your_key"`.
 ```text
 AI_Reader_Document  →  .xlsx / .csv
                            │
-                           ▼
-            python -m scripts.import_vocab ...
-                           │
-                           ▼
-                     data/app.db
-                           │
-              FastAPI  GET /words, /sources
-                           │
-                           ▼
-                      Android app
+           ┌───────────────┴───────────────┐
+           ▼                               ▼
+  upload_railway (production)     import_vocab (local)
+           │                               │
+           ▼                               ▼
+   Railway Postgres                  data/app.db
+           │
+           ▼
+   Android app (HTTPS)
 ```

@@ -58,33 +58,49 @@ API_KEYS=your_generated_key_here
 
 ## 4. Public domain
 
+**Domain hiện tại:** `https://aireaderbackend-production.up.railway.app`
+
 1. Service API → **Settings** → **Networking** → **Generate Domain**
-2. URL dạng: `https://ai-reader-backend-production-xxxx.up.railway.app`
-3. Kiểm tra:
+2. Kiểm tra:
 
 ```bash
-curl https://YOUR-DOMAIN/health
+curl.exe https://aireaderbackend-production.up.railway.app/health
 # {"status":"ok"}
 ```
 
-Docs: `https://YOUR-DOMAIN/docs`
+Docs: `https://aireaderbackend-production.up.railway.app/docs`
 
 ---
 
 ## 5. Import vocabulary lên production
 
-Từ máy local (file CSV):
+> **Không** commit API key. Lấy từ Railway → API service → Variables → `API_KEYS`.
 
-```bash
-curl -F "file=@data/新HSK1教程3.0_TuVung_HSK1+_p010-017.csv" ^
-  -F "source_name=新HSK1教程3.0_TuVung_HSK1+_p010-017" ^
-  -F "language=zh" ^
-  -F "level=HSK1+" ^
-  -H "X-API-Key: YOUR_KEY" ^
-  https://YOUR-DOMAIN/import
+### Cách nhanh (khuyến nghị)
+
+```powershell
+cd D:\Android_Project_Personal\ai-reader-backend
+$env:AIREADER_API_KEY="paste_from_railway"   # mỗi session; đừng commit
+
+python -m scripts.upload_railway `
+  "D:\Android_Project_Personal\AI_Reader_Document\output\FILE.xlsx" `
+  --lang zh --level HSK2+
 ```
 
-Hoặc dùng CLI với `DATABASE_URL` production (ít dùng hơn):
+Nhận `.xlsx` hoặc `.csv`. Chi tiết: [`docs/IMPORT.md`](IMPORT.md) mục 4.
+
+### Curl (CSV only; PowerShell dùng `curl.exe`)
+
+```powershell
+curl.exe -F "file=@path\to\file.csv" `
+  -F "source_name=Ten_Source" `
+  -F "language=zh" `
+  -F "level=HSK2+" `
+  -H "X-API-Key: $env:AIREADER_API_KEY" `
+  https://aireaderbackend-production.up.railway.app/import
+```
+
+### CLI trực tiếp Postgres (ít dùng)
 
 ```bash
 set DATABASE_URL=postgresql+psycopg://...
@@ -95,16 +111,16 @@ python -m scripts.import_vocab "path\to\file.xlsx" --lang zh --level HSK1+
 
 ## 6. Android
 
-Đổi base URL Retrofit sang:
+Base URL Retrofit:
 
 ```text
-https://YOUR-DOMAIN/
+https://aireaderbackend-production.up.railway.app/
 ```
 
-Gửi header:
+Header (key từ Railway / BuildConfig — **không** hard-code lên git public):
 
 ```text
-X-API-Key: YOUR_KEY
+X-API-Key: <same value as API_KEYS>
 ```
 
 ---
@@ -116,10 +132,10 @@ X-API-Key: YOUR_KEY
 [ ] New Project → Deploy from GitHub
 [ ] Add PostgreSQL + gắn DATABASE_URL vào API
 [ ] Set API_KEYS
-[ ] Generate Domain
-[ ] curl /health → ok
-[ ] POST /import CSV
-[ ] GET /words?lang=zh → có data
+[ ] Generate Domain (đã có: aireaderbackend-production.up.railway.app)
+[ ] curl.exe /health → ok
+[ ] $env:AIREADER_API_KEY + python -m scripts.upload_railway ...
+[ ] GET /sources hoặc /stats → có data
 [ ] Đổi base URL app Android
 ```
 
