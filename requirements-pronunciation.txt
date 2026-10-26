@@ -1,0 +1,3 @@
+# Optional heavy stack for OpenPronounce (English pronunciation).
+# Install after torch CPU wheels — see Dockerfile.
+openpronounce>=0.1.0

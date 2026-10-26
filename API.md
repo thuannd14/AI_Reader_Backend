@@ -187,6 +187,27 @@ Append message (`role`: `user` \| `assistant`):
 
 Cùng `user_id` + `client_message_id` ? idempotent (tr? b?n ghi c?).
 
+---
+
+## Pronunciation (OpenPronounce — English)
+
+Self-hosted phoneme scoring (no Azure). Requires ffmpeg + espeak-ng + torch in the image.
+
+| Method | Path |
+|---|---|
+| `GET` | `/pronunciation/health` |
+| `POST` | `/pronunciation/assess` |
+
+Multipart form:
+
+- `file` — audio (wav / m4a / mp3)
+- `expected_text` — sentence the learner should read
+- `lang` — default `en` (English only on this deployment)
+
+Response includes `score`, `recognized_text`, accuracy/fluency/completeness-style fields, and `words[]` mispronunciations.
+
+Env: `ENABLE_OPENPRONOUNCE=1` (default). First request may download ~GB models from Hugging Face — need enough Railway RAM/disk.
+
 ## Import CSV
 
 Khuy?n ngh? (xlsx/csv, key t? env — xem `docs/IMPORT.md`):
