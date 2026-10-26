@@ -152,6 +152,41 @@ Batch upsert body:
 
 `status`: `LEARNING` | `KNOWN` | `REVIEW`. Conflict: keep row with newer `updated_at_epoch_ms`.
 
+---
+
+## Chat logs (Chieng AI tutor history)
+
+App g?i DeepSeek tr?c ti?p; Railway ch? l?u transcript khi user ?ã ??ng nh?p.
+
+| Method | Path |
+|---|---|
+| `POST` | `/chat-logs/{user_id}/sessions` |
+| `POST` | `/chat-logs/{user_id}/messages` |
+| `GET` | `/chat-logs/{user_id}/sessions` |
+| `GET` | `/chat-logs/{user_id}/sessions/{session_id}/messages` |
+
+Create session:
+
+```json
+{ "locale": "vi" }
+```
+
+Append message (`role`: `user` \| `assistant`):
+
+```json
+{
+  "session_id": "uuid",
+  "role": "user",
+  "content": "??",
+  "client_message_id": "local-uuid",
+  "model": "deepseek-chat",
+  "locale": "vi",
+  "created_at_epoch_ms": 1730000000000
+}
+```
+
+Cùng `user_id` + `client_message_id` ? idempotent (tr? b?n ghi c?).
+
 ## Import CSV
 
 Khuy?n ngh? (xlsx/csv, key t? env — xem `docs/IMPORT.md`):

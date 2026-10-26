@@ -1,10 +1,12 @@
 """Database models.
 
 Tables:
-    * Source        - one imported document (file name, language, level).
-    * Vocabulary    - one word/phrase, linked to its Source via `source_id`.
-    * UserProgress  - per-user continue-lesson pointer + study streak.
-    * LearningWord  - per-user saved flashcard words (Chieng).
+    * Source          - one imported document (file name, language, level).
+    * Vocabulary      - one word/phrase, linked to its Source via `source_id`.
+    * UserProgress    - per-user continue-lesson pointer + study streak.
+    * LearningWord    - per-user saved flashcard words (Chieng).
+    * ChatSession     - per-user AI tutor conversation session (Chieng logs).
+    * ChatLogMessage  - one user/assistant turn stored for a session.
 
 (The FK is handled explicitly in the code rather than via ORM relationships,
 which keeps the models simple and portable across databases.)
@@ -13,7 +15,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import BigInteger, Column
+from sqlalchemy import BigInteger, Column, Text
 from sqlmodel import Field, SQLModel
 
 
@@ -81,3 +83,31 @@ class LearningWord(SQLModel, table=True):
         default=0,
         sa_column=Column(BigInteger(), nullable=False, default=0, index=True),
     )
+
+
+class ChatSession(SQLModel, table=True):
+    """One spoken/typed AI tutor conversation for a Chieng user."""
+
+    id: str = Field(primary_key=True, max_length=64)
+    user_id: str = Field(index=True, max_length=128)
+    locale: str = Field(default="")
+    created_at: datetime = Field(default_factory=_utcnow)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
+class ChatLogMessage(SQLModel, table=True):
+    """One turn (user STT/text or assistant DeepSeek reply) persisted on Railway."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    session_id: str = Field(index=True, max_length=64, foreign_key="chatsession.id")
+    user_id: str = Field(index=True, max_length=128)
+    role: str = Field(index=True, max_length=16)  # user | assistant
+    content: str = Field(default="", sa_column=Column(Text(), nullable=False))
+    model: str = Field(default="")
+    locale: str = Field(default="")
+    client_message_id: str = Field(default="", max_length=128, index=True)
+    created_at_epoch_ms: int = Field(
+        default=0,
+        sa_column=Column(BigInteger(), nullable=False, default=0, index=True),
+    )
+    created_at: datetime = Field(default_factory=_utcnow)

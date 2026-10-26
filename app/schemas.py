@@ -144,3 +144,45 @@ class LearningWordsUpsertBatch(BaseModel):
 
 class LearningWordsListOut(BaseModel):
     items: list[LearningWordOut]
+
+
+class ChatSessionCreate(BaseModel):
+    locale: str | None = None
+
+
+class ChatSessionOut(BaseModel):
+    id: str
+    user_id: str
+    locale: str = ""
+    created_at_epoch_ms: int = 0
+    message_count: int = 0
+
+
+class ChatSessionListOut(BaseModel):
+    items: list[ChatSessionOut]
+
+
+class ChatLogMessageCreate(BaseModel):
+    session_id: str
+    role: str
+    content: str
+    client_message_id: str = ""
+    model: str = ""
+    locale: str = ""
+    created_at_epoch_ms: int = 0
+
+
+class ChatLogMessageOut(BaseModel):
+    id: int
+    session_id: str
+    user_id: str
+    role: str
+    content: str
+    model: str = ""
+    locale: str = ""
+    client_message_id: str = ""
+    created_at_epoch_ms: int = 0
+
+
+class ChatLogMessageListOut(BaseModel):
+    items: list[ChatLogMessageOut]

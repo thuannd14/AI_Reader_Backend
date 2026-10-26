@@ -130,6 +130,48 @@ def main() -> int:
     got = client.get(f"/progress/{uid}").json()
     assert got["streak_count"] == 5 and got["user_id"] == uid, got
 
+    # chat-logs: session + user/assistant turns (idempotent client_message_id)
+    sess = client.post(f"/chat-logs/{uid}/sessions", json={"locale": "vi"}).json()
+    assert sess["id"] and sess["user_id"] == uid and sess["message_count"] == 0, sess
+    sid = sess["id"]
+    user_msg = client.post(
+        f"/chat-logs/{uid}/messages",
+        json={
+            "session_id": sid,
+            "role": "user",
+            "content": "你好",
+            "client_message_id": "msg-user-1",
+            "locale": "vi",
+            "created_at_epoch_ms": 1_730_000_000_000,
+        },
+    ).json()
+    assert user_msg["role"] == "user" and user_msg["content"] == "你好", user_msg
+    dup = client.post(
+        f"/chat-logs/{uid}/messages",
+        json={
+            "session_id": sid,
+            "role": "user",
+            "content": "你好",
+            "client_message_id": "msg-user-1",
+        },
+    ).json()
+    assert dup["id"] == user_msg["id"], dup
+    asst = client.post(
+        f"/chat-logs/{uid}/messages",
+        json={
+            "session_id": sid,
+            "role": "assistant",
+            "content": "你好！很高兴认识你。",
+            "client_message_id": "msg-asst-1",
+            "model": "deepseek-chat",
+        },
+    ).json()
+    assert asst["role"] == "assistant" and asst["model"] == "deepseek-chat", asst
+    listed = client.get(f"/chat-logs/{uid}/sessions/{sid}/messages").json()
+    assert len(listed["items"]) == 2, listed
+    sessions = client.get(f"/chat-logs/{uid}/sessions").json()
+    assert any(s["id"] == sid and s["message_count"] == 2 for s in sessions["items"]), sessions
+
     print("ALL API TESTS PASSED")
     return 0
 
