@@ -37,3 +37,15 @@ _raw_keys = os.environ.get("API_KEYS", "").strip()
 API_KEYS: set[str] = {k.strip() for k in _raw_keys.split(",") if k.strip()}
 AUTH_ENABLED: bool = bool(API_KEYS)
 
+# --- AI chat (OpenAI-compatible) ------------------------------------------
+# Set OPENAI_API_KEY on Railway. Works with OpenAI, Groq, OpenRouter, etc.
+# Optional: OPENAI_BASE_URL (default https://api.openai.com/v1)
+# Optional: OPENAI_MODEL (default gpt-4o-mini)
+OPENAI_API_KEY: str = os.environ.get("OPENAI_API_KEY", "").strip()
+OPENAI_BASE_URL: str = os.environ.get(
+    "OPENAI_BASE_URL", "https://api.openai.com/v1"
+).rstrip("/")
+OPENAI_MODEL: str = os.environ.get("OPENAI_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
+CHAT_ENABLED: bool = bool(OPENAI_API_KEY)
+CHAT_TIMEOUT_SECONDS: float = float(os.environ.get("CHAT_TIMEOUT_SECONDS", "60"))
+

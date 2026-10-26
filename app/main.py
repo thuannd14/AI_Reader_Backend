@@ -17,7 +17,7 @@ from .config import API_TITLE, API_VERSION
 from .auth import require_api_key
 from .db import get_session, init_db
 from .importer import import_csv_stream
-from .routers import learning_words, progress, sources, words
+from .routers import chat, learning_words, progress, sources, words
 from .schemas import ImportResult
 
 
@@ -104,3 +104,4 @@ app.include_router(words.router)
 app.include_router(sources.router)
 app.include_router(progress.router)
 app.include_router(learning_words.router)
+app.include_router(chat.router)
