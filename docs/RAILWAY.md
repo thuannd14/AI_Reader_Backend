@@ -82,9 +82,15 @@ Docs: `https://aireaderbackend-production.up.railway.app/docs`
 cd D:\Android_Project_Personal\ai-reader-backend
 $env:AIREADER_API_KEY="paste_from_railway"   # mỗi session; đừng commit
 
+# Tiếng Trung
 python -m scripts.upload_railway `
   "D:\Android_Project_Personal\AI_Reader_Document\output\FILE.xlsx" `
   --lang zh --level HSK2+
+
+# Tiếng Anh
+python -m scripts.upload_railway `
+  "D:\Android_Project_Personal\AI_Reader_Document\output\ETS 2026- RC_TuVung_B2_p140-167.csv" `
+  --lang en --level B2
 ```
 
 Nhận `.xlsx` hoặc `.csv`. Chi tiết: [`docs/IMPORT.md`](IMPORT.md) mục 4.
@@ -92,10 +98,19 @@ Nhận `.xlsx` hoặc `.csv`. Chi tiết: [`docs/IMPORT.md`](IMPORT.md) mục 4.
 ### Curl (CSV only; PowerShell dùng `curl.exe`)
 
 ```powershell
+# zh
 curl.exe -F "file=@path\to\file.csv" `
   -F "source_name=Ten_Source" `
   -F "language=zh" `
   -F "level=HSK2+" `
+  -H "X-API-Key: $env:AIREADER_API_KEY" `
+  https://aireaderbackend-production.up.railway.app/import
+
+# en
+curl.exe -F "file=@path\to\english.csv" `
+  -F "source_name=ETS_B2" `
+  -F "language=en" `
+  -F "level=B2" `
   -H "X-API-Key: $env:AIREADER_API_KEY" `
   https://aireaderbackend-production.up.railway.app/import
 ```

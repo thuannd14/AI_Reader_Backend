@@ -9,8 +9,10 @@ Never put the API key in git. Set it once per shell:
     set AIreader_API_KEY=your_key_here
 
 Usage:
+    # Chinese (HSK)
     python -m scripts.upload_railway "path\\file.xlsx" --lang zh --level HSK2+
-    python -m scripts.upload_railway "path\\file.csv" --lang zh --level HSK1+
+    # English (CEFR)
+    python -m scripts.upload_railway "path\\file.csv" --lang en --level B2
 """
 from __future__ import annotations
 

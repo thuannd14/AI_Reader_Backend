@@ -206,13 +206,20 @@ Khuy?n ngh? (xlsx/csv, key t? env — xem `docs/IMPORT.md`):
 
 ```powershell
 $env:AIREADER_API_KEY="..."   # from Railway API_KEYS — never commit
+# Chinese
 python -m scripts.upload_railway "path\to\file.xlsx" --lang zh --level HSK2+
+# English
+python -m scripts.upload_railway "path\to\file.csv" --lang en --level B2
 ```
 
 Ho?c curl (CSV; PowerShell dùng `curl.exe`):
 
 ```bash
 curl.exe -F "file=@vocab.csv" -F "language=zh" -F "level=HSK1+" \
+  -H "X-API-Key: $env:AIREADER_API_KEY" \
+  https://aireaderbackend-production.up.railway.app/import
+
+curl.exe -F "file=@english.csv" -F "language=en" -F "level=B2" \
   -H "X-API-Key: $env:AIREADER_API_KEY" \
   https://aireaderbackend-production.up.railway.app/import
 ```

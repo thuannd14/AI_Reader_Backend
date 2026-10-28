@@ -157,25 +157,49 @@ cd D:\Android_Project_Personal\ai-reader-backend
 
 # lần đầu mỗi cửa sổ PowerShell:
 $env:AIREADER_API_KEY="..."
+```
 
+**Tiếng Trung (HSK):**
+
+```powershell
 python -m scripts.upload_railway `
   "D:\Android_Project_Personal\AI_Reader_Document\output\FILE.xlsx" `
   --lang zh --level HSK2+
+```
+
+**Tiếng Anh (CEFR):**
+
+```powershell
+python -m scripts.upload_railway `
+  "D:\Android_Project_Personal\AI_Reader_Document\output\ETS 2026- RC_TuVung_B2_p140-167.csv" `
+  --lang en --level B2
 ```
 
 Script tự đổi `.xlsx` → CSV rồi `POST /import`. Output mẫu:
 
 ```text
 Uploaded 54 words [zh/HSK2+] <- ...  (skipped 0, source_id=2)
+Uploaded 104 words [en/B2] <- ETS 2026- RC_TuVung_B2_p140-167  (skipped 0, source_id=4)
 ```
+
+> Không có cột `traditional` → auto `en`; có cột `traditional` → auto `zh`. Vẫn nên truyền `--lang` / `--level` rõ ràng.
 
 ### Curl thủ công (chỉ CSV; dùng `curl.exe` trên PowerShell)
 
 ```powershell
+# zh
 curl.exe -F "file=@D:\path\to\file.csv" `
   -F "source_name=Ten_Source" `
   -F "language=zh" `
   -F "level=HSK2+" `
+  -H "X-API-Key: $env:AIREADER_API_KEY" `
+  https://aireaderbackend-production.up.railway.app/import
+
+# en
+curl.exe -F "file=@D:\path\to\english.csv" `
+  -F "source_name=ETS_B2" `
+  -F "language=en" `
+  -F "level=B2" `
   -H "X-API-Key: $env:AIREADER_API_KEY" `
   https://aireaderbackend-production.up.railway.app/import
 ```
@@ -197,6 +221,7 @@ Hoặc `POST http://localhost:8000/import` khi `run.bat` đang chạy.
 [ ] 2. cd ai-reader-backend
 [ ] 3. $env:AIREADER_API_KEY="..."   (nếu chưa set trong session)
 [ ] 4. python -m scripts.upload_railway "PATH\file.xlsx" --lang zh --level HSK2+
+       hoặc: python -m scripts.upload_railway "PATH\file.csv" --lang en --level B2
 [ ] 5. Kiểm tra: GET /sources hoặc /stats trên domain Railway
 ```
 
